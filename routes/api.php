@@ -1,28 +1,16 @@
 <?php
-
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\TaskController;
 
-Route::post('/auth/login', function (Request $request) {
-    $credentials = $request->validate([
-        'email' => ['required','email'],
-        'password' => ['required'],
-    ]);
+Route::get('/health', fn() => ['ok'=>true]);
 
-    if (! Auth::attempt($credentials)) {
-        return response()->json(['message' => 'Invalid credentials'], 422);
-    }
+// CSRF cookie: GET /sanctum/csrf-cookie is auto-registered by Sanctum
 
-    $request->session()->regenerate();
-    return response()->json(['user' => Auth::user()]);
+Route::post('/auth/login', [AuthController::class, 'login']);
+Route::post('/auth/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
+Route::get('/auth/me', [AuthController::class, 'me'])->middleware('auth:sanctum');
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::apiResource('tasks', TaskController::class);
 });
-
-Route::post('/auth/logout', function (Request $request) {
-    Auth::guard('web')->logout();
-    $request->session()->invalidate();
-    $request->session()->regenerateToken();
-    return response()->json(['ok' => true]);
-});
-
-Route::get('/me', fn () => Auth::user())->middleware('auth:sanctum');
