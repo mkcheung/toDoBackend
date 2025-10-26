@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 class TaskFactory extends Factory
 {
     protected $model = Task::class;
-    
+
     public function definition(): array
     {
         return [
@@ -20,5 +20,11 @@ class TaskFactory extends Factory
             'due_date' => fake()->optional()->date(),
             'done' => fake()->boolean(20),
         ];
+    }
+
+    // Add a helper for explicit user assignment
+    public function forUser($userId): static
+    {
+        return $this->state(fn() => ['user_id' => $userId]);
     }
 }
