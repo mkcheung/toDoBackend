@@ -32,4 +32,74 @@ class TaskControllerTest extends TestCase{
         }
     }
 
+    public function testStore(){
+        $taskController = $this->app->make(TaskController::class);
+        $user = User::factory()->create();
+        $request = Request::create('/api/tasks', 'POST', [
+            'task' => 'New Task',
+            'priority' => 'medium',
+            'due_date' => now(),
+            'done' => false
+        ]);
+        $request->setUserResolver(fn() => $user);
+        $jsonResponse = $taskController->store($request);
+        $this->assertSame(201, $jsonResponse->getStatusCode());
+        $this->assertDatabaseHas('tasks', [
+            'task'    => 'New Task',
+            'user_id' => $user->id,
+            'done'    => 0, // boolean stored as tinyint
+        ]);
+    }
+
+    public function testShow(){
+        $taskController = $this->app->make(TaskController::class);
+        $user = User::factory()->create();
+        $createRequest = Request::create('/api/tasks', 'POST', [
+            'task' => 'New Task',
+            'priority' => 'medium',
+            'due_date' => now(),
+            'done' => false
+        ]);
+        $createRequest->setUserResolver(fn() => $user);
+        $jsonResponse = $taskController->store($createRequest);
+        $this->assertSame(201, $jsonResponse->getStatusCode());
+        $this->assertDatabaseHas('tasks', [
+            'task'    => 'New Task',
+            'user_id' => $user->id,
+            'done'    => 0, // boolean stored as tinyint
+        ]);
+        $newTask = Task::find($jsonResponse->getData(true)['id']);
+        $this->actingAs($user);
+        $showRequest = Request::create("/api/tasks/{$newTask->id}", 'GET');
+        $showRequest->setUserResolver(fn() => $user);
+        $showTaskResult = $taskController->show($showRequest,$newTask);
+        $this->assertEquals($newTask->id, $showTaskResult->id);
+    }
+
+    public function testUpdate(){
+        $taskController = $this->app->make(TaskController::class);
+        $user = User::factory()->create();
+        $createRequest = Request::create('/api/tasks', 'POST', [
+            'task' => 'New Task',
+            'priority' => 'medium',
+            'due_date' => now(),
+            'done' => false
+        ]);
+        $createRequest->setUserResolver(fn() => $user);
+        $jsonResponse = $taskController->store($createRequest);
+        $this->assertSame(201, $jsonResponse->getStatusCode());
+        $this->assertDatabaseHas('tasks', [
+            'task'    => 'New Task',
+            'user_id' => $user->id,
+            'done'    => 0, // boolean stored as tinyint
+        ]);
+        $newTask = Task::find($jsonResponse->getData(true)['id']);
+        $this->actingAs($user);
+        $updateRequest = Request::create("/api/tasks/{$newTask->id}", 'UPDATE', [
+            'task' => 'Update Task'
+        ]);
+        $updateTaskResult = $taskController->update($updateRequest, $newTask);
+        $this->assertEquals($updateTaskResult->task, 'Update Task');
+    }
+
 }
