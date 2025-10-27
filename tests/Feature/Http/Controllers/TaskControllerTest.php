@@ -102,4 +102,30 @@ class TaskControllerTest extends TestCase{
         $this->assertEquals($updateTaskResult->task, 'Update Task');
     }
 
+    public function testDestroy(){
+        $taskController = $this->app->make(TaskController::class);
+        $user = User::factory()->create();
+        $createRequest = Request::create('/api/tasks', 'POST', [
+            'task' => 'New Task',
+            'priority' => 'medium',
+            'due_date' => now(),
+            'done' => false
+        ]);
+        $createRequest->setUserResolver(fn() => $user);
+        $jsonResponse = $taskController->store($createRequest);
+        $this->assertSame(201, $jsonResponse->getStatusCode());
+        $this->assertDatabaseHas('tasks', [
+            'task'    => 'New Task',
+            'user_id' => $user->id,
+            'done'    => 0, // boolean stored as tinyint
+        ]);
+        $newTask = Task::find($jsonResponse->getData(true)['id']);
+        $this->actingAs($user);
+        $deleteRequest = Request::create("/api/tasks/{$newTask->id}", 'DELETE');
+        $deleteTaskResult = $taskController->destroy($deleteRequest, $newTask);
+        $this->assertDatabaseMissing('tasks', [
+            'id' => $newTask->id,
+        ]);
+
+    }
 }
